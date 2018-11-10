@@ -37,6 +37,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class CSSHandler {
+    private static final int LINE_CHUNK_SIZE = 500;
+
     private static final String stringLiteralRegex = "(\"(?:\\.|[^\\\"])*\"|'(?:\\.|[^\\'])*')";
     private static final String urlRegex = String.format(
             "(?:url\\(\\s*(%s|[^)]*)\\s*\\))", stringLiteralRegex);
@@ -53,37 +55,56 @@ public final class CSSHandler {
         String text;
     }
 
+    private static List<String> chunkString(final String text, final int size) {
+        List<String> ret = new ArrayList<String>((text.length() + size - 1) / size);
+        for (int start = 0; start < text.length(); start += size) {
+            ret.add(text.substring(start, Math.min(text.length(), start + size)));
+        }
+        return ret;
+    }
 
-    public void parse(String line, List<ReplaceInfo> replaces, int start) {
-        Matcher m = regex.matcher(line);
+    public void parse(String lineSrc, List<ReplaceInfo> replaces, int start) {
 
-        while (m.find()) {
-            try {
-                if (m.group(3) != null) {
-                    ReplaceInfo replace = new ReplaceInfo();
-                    replace.isImport = true;
-                    replace.text = cleanQuotesFromMatchString(m.group(3));
-                    replace.begin = line.substring(0, m.start(3)).lastIndexOf("@import") + start;
-                    replace.end = line.substring(m.end(3)).indexOf(";") + m.end(3) + 1 + start;
-                    replaces.add(replace);
-                }
-                if (m.group(5) != null) {
-                    ReplaceInfo replace = new ReplaceInfo();
-                    replace.isImport = true;
-                    replace.text = cleanQuotesFromMatchString(m.group(5));
-                    replace.begin = line.substring(0, m.start(5)).lastIndexOf("@import") + start;
-                    replace.end = line.substring(m.end(5)).indexOf(";") + m.end(5) + 1 + start;
-                    replaces.add(replace);
-                }
-                if (m.group(7) != null) {
-                    ReplaceInfo replace = new ReplaceInfo();
-                    replace.text = cleanQuotesFromMatchString(m.group(7));
-                    replace.begin = m.start(7) + start;
-                    replace.end = m.end(7) + start;
-                    if (!PathUtils.isWebAddress(replace.text))
+        List<String> lineChunks = chunkString(lineSrc, LINE_CHUNK_SIZE);
+
+        for (String line : lineChunks)
+        {
+            Matcher m = regex.matcher(line);
+
+            while (m.find())
+            {
+                try
+                {
+                    if (m.group(3) != null)
+                    {
+                        ReplaceInfo replace = new ReplaceInfo();
+                        replace.isImport = true;
+                        replace.text = cleanQuotesFromMatchString(m.group(3));
+                        replace.begin = line.substring(0, m.start(3)).lastIndexOf("@import") + start;
+                        replace.end = line.substring(m.end(3)).indexOf(";") + m.end(3) + 1 + start;
                         replaces.add(replace);
+                    }
+                    if (m.group(5) != null)
+                    {
+                        ReplaceInfo replace = new ReplaceInfo();
+                        replace.isImport = true;
+                        replace.text = cleanQuotesFromMatchString(m.group(5));
+                        replace.begin = line.substring(0, m.start(5)).lastIndexOf("@import") + start;
+                        replace.end = line.substring(m.end(5)).indexOf(";") + m.end(5) + 1 + start;
+                        replaces.add(replace);
+                    }
+                    if (m.group(7) != null)
+                    {
+                        ReplaceInfo replace = new ReplaceInfo();
+                        replace.text = cleanQuotesFromMatchString(m.group(7));
+                        replace.begin = m.start(7) + start;
+                        replace.end = m.end(7) + start;
+                        if (!PathUtils.isWebAddress(replace.text)) replaces.add(replace);
+                    }
                 }
-            } catch (IndexOutOfBoundsException e) { /* eat move on */ }
+                catch (IndexOutOfBoundsException e)
+                { /* eat move on */ }
+            }
         }
     }
 
