@@ -67,6 +67,8 @@ public final class CSSHandler {
 
         List<String> lineChunks = chunkString(lineSrc, LINE_CHUNK_SIZE);
 
+        int chunkedLineStart = 0;
+
         for (String line : lineChunks)
         {
             Matcher m = regex.matcher(line);
@@ -80,8 +82,8 @@ public final class CSSHandler {
                         ReplaceInfo replace = new ReplaceInfo();
                         replace.isImport = true;
                         replace.text = cleanQuotesFromMatchString(m.group(3));
-                        replace.begin = line.substring(0, m.start(3)).lastIndexOf("@import") + start;
-                        replace.end = line.substring(m.end(3)).indexOf(";") + m.end(3) + 1 + start;
+                        replace.begin = chunkedLineStart + line.substring(0, m.start(3)).lastIndexOf("@import") + start;
+                        replace.end = chunkedLineStart + line.substring(m.end(3)).indexOf(";") + m.end(3) + 1 + start;
                         replaces.add(replace);
                     }
                     if (m.group(5) != null)
@@ -89,22 +91,23 @@ public final class CSSHandler {
                         ReplaceInfo replace = new ReplaceInfo();
                         replace.isImport = true;
                         replace.text = cleanQuotesFromMatchString(m.group(5));
-                        replace.begin = line.substring(0, m.start(5)).lastIndexOf("@import") + start;
-                        replace.end = line.substring(m.end(5)).indexOf(";") + m.end(5) + 1 + start;
+                        replace.begin = chunkedLineStart + line.substring(0, m.start(5)).lastIndexOf("@import") + start;
+                        replace.end = chunkedLineStart + line.substring(m.end(5)).indexOf(";") + m.end(5) + 1 + start;
                         replaces.add(replace);
                     }
                     if (m.group(7) != null)
                     {
                         ReplaceInfo replace = new ReplaceInfo();
                         replace.text = cleanQuotesFromMatchString(m.group(7));
-                        replace.begin = m.start(7) + start;
-                        replace.end = m.end(7) + start;
+                        replace.begin = chunkedLineStart + m.start(7) + start;
+                        replace.end = chunkedLineStart + m.end(7) + start;
                         if (!PathUtils.isWebAddress(replace.text)) replaces.add(replace);
                     }
                 }
                 catch (IndexOutOfBoundsException e)
                 { /* eat move on */ }
             }
+            chunkedLineStart += line.length();
         }
     }
 
